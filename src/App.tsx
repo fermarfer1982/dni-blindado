@@ -2,7 +2,7 @@ import { ChangeEvent, PointerEvent, useEffect, useMemo, useRef, useState } from 
 
 type DocType = 'DNI' | 'NIE' | 'Pasaporte' | 'Otro';
 type Preset = 'Alquiler' | 'Hotel' | 'RRHH' | 'Compra/Venta' | 'Verificación cuenta' | 'Otros';
-type RedactionType = 'Negro' | 'Blur';
+type RedactionType = 'black' | 'blur';
 
 type Redaction = {
   id: string;
@@ -36,7 +36,7 @@ export default function App() {
   const [watermarkDiagonal, setWatermarkDiagonal] = useState(true);
   const [opacity, setOpacity] = useState(0.22);
   const [fontSize, setFontSize] = useState(28);
-  const [redactionType, setRedactionType] = useState<RedactionType>('Negro');
+  const [redactionType, setRedactionType] = useState<RedactionType>('black');
   const [redactions, setRedactions] = useState<Redaction[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const [draftRect, setDraftRect] = useState<Redaction | null>(null);
@@ -75,36 +75,30 @@ export default function App() {
     canvas.width = Math.min(imageEl.naturalWidth, maxWidth);
     canvas.height = Math.round(canvas.width / ratio);
 
+    const drawX = 0;
+    const drawY = 0;
+    const drawW = canvas.width;
+    const drawH = canvas.height;
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(imageEl, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(imageEl, drawX, drawY, drawW, drawH);
 
     const allRects = draftRect ? [...redactions, draftRect] : redactions;
 
     allRects
-      .filter((rect) => rect.type === 'Blur')
+      .filter((rect) => rect.type === 'blur')
       .forEach((rect) => {
-        const temp = document.createElement('canvas');
-        temp.width = rect.width;
-        temp.height = rect.height;
-        const tctx = temp.getContext('2d');
-        if (!tctx) return;
-        tctx.filter = 'blur(8px)';
-        tctx.drawImage(
-          canvas,
-          rect.x,
-          rect.y,
-          rect.width,
-          rect.height,
-          0,
-          0,
-          rect.width,
-          rect.height
-        );
-        ctx.drawImage(temp, rect.x, rect.y);
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(rect.x, rect.y, rect.width, rect.height);
+        ctx.clip();
+        ctx.filter = 'blur(12px)';
+        ctx.drawImage(imageEl, drawX, drawY, drawW, drawH);
+        ctx.restore();
       });
 
     allRects
-      .filter((rect) => rect.type === 'Negro')
+      .filter((rect) => rect.type === 'black')
       .forEach((rect) => {
         ctx.fillStyle = '#000';
         ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
@@ -269,7 +263,7 @@ export default function App() {
     setWatermarkDiagonal(true);
     setOpacity(0.22);
     setFontSize(28);
-    setRedactionType('Negro');
+    setRedactionType('black');
     setRedactions([]);
     setDraftRect(null);
     setShareMessage('');
@@ -382,15 +376,15 @@ export default function App() {
           <label>
             Tipo de redacción
             <select value={redactionType} onChange={(e) => setRedactionType(e.target.value as RedactionType)}>
-              <option>Negro</option>
-              <option>Blur</option>
+              <option value="black">Negro</option>
+              <option value="blur">Blur</option>
             </select>
           </label>
           <p className="hint">Tap y arrastra sobre la imagen para añadir redacción.</p>
           <ul className="redaction-list">
             {redactions.map((item, index) => (
               <li key={item.id}>
-                #{index + 1} {item.type} ({Math.round(item.width)}x{Math.round(item.height)})
+                #{index + 1} {item.type === 'black' ? 'Negro' : 'Blur'} ({Math.round(item.width)}x{Math.round(item.height)})
                 <button type="button" onClick={() => setRedactions((prev) => prev.filter((r) => r.id !== item.id))}>
                   Eliminar
                 </button>
